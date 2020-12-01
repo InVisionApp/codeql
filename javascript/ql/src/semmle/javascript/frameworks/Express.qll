@@ -489,13 +489,14 @@ module Express {
     string kind;
 
     RequestInputAccess() {
-      kind = "parameter" and
-      this =
-        [getAQueryObjectReference(DataFlow::TypeTracker::end(), rh),
-            getAParamsObjectReference(DataFlow::TypeTracker::end(), rh)].getAPropertyRead()
+      (kind = "parameter" or kind = "query-parameter") and
+      this = getAQueryObjectReference(DataFlow::TypeTracker::end(), rh).getAPropertyRead()
+      or
+      (kind = "parameter" or kind = "path-parameter") and
+      this = getAParamsObjectReference(DataFlow::TypeTracker::end(), rh).getAPropertyRead()
       or
       exists(DataFlow::SourceNode request | request = rh.getARequestSource().ref() |
-        kind = "parameter" and
+        (kind = "parameter" or kind = "path-parameter") and
         this = request.getAMethodCall("param")
         or
         // `req.originalUrl`
@@ -515,7 +516,7 @@ module Express {
       this.asExpr() = rh.getARequestBodyAccess()
       or
       // `value` in `router.param('foo', (req, res, next, value) => { ... })`
-      kind = "parameter" and
+      (kind = "parameter" or kind = "path-parameter") and
       exists(RouteSetup setup | rh = setup.getARouteHandler() |
         this = DataFlow::parameterNode(rh.getRouteHandlerParameter("parameter"))
       )
